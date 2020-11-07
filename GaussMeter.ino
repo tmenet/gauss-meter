@@ -31,7 +31,7 @@ int Gauss;
 int loopCounter;
 int maxGauss;
 int offset;
-
+unsigned long last_time;
 void setup() {
   Serial.begin(9600);
 
@@ -45,6 +45,7 @@ void setup() {
     for (;;); // Don't proceed, loop forever
   }
 
+  last_time = millis();
 
   // Show initial display buffer contents on the screen --
   // the library initializes this with an Adafruit splash screen.
@@ -86,39 +87,47 @@ void loop() {
   voltage = map(volt, 0, 1023, 0, 5000) + offset; // map 0-1023 to 0-2500 and add correction offset
   voltage /= 1000; // divide by 100 to get the decimal values
   Gauss = (voltage - 2.5) * 320;  // 3.125mV/Gauss is 320 Gauss per Volt
-
-  display.clearDisplay();
-  display.setTextSize(2);             // Normal 1:1 pixel scale
-  display.setTextColor(BLACK, WHITE);        // Draw white text
-  display.setCursor(0, 0);            // Start at top-left corner
-  display.println(F("GaussMeter"));
-  display.setTextColor(WHITE);        // Draw white text
-  display.println();
-   display.setCursor(24, 32);
-  display.println(Gauss);
   if (abs(Gauss) > abs(maxGauss))
   {
     maxGauss = Gauss;
-    loopCounter=20;
+    loopCounter = 20;
   }
-  if (loopCounter--<=0) maxGauss=Gauss;
-  display.setCursor(24, 46);
-  display.println(maxGauss);
-  display.setCursor(80, 32);
-  //display.println(F(" G"));
-  if (voltage < 2.5)
+
+
+
+    
+  if ((500+last_time) <= millis())
   {
-    display.println("N");
+    last_time = millis();
+    Serial.println(last_time );
+    display.clearDisplay();
+    display.setTextSize(2);             // Normal 1:1 pixel scale
+    display.setTextColor(BLACK, WHITE);        // Draw white text
+    display.setCursor(0, 0);            // Start at top-left corner
+    display.println(F("GaussMeter"));
+    display.setTextColor(WHITE);        // Draw white text
+    display.println();
+    display.setCursor(24, 32);
+    display.println(Gauss);
+
+    if (loopCounter-- <= 0) maxGauss = Gauss;
+    display.setCursor(24, 46);
+    display.println(maxGauss);
+    display.setCursor(80, 32);
+    //display.println(F(" G"));
+    if (voltage < 2.5)
+    {
+      display.println("N");
+    }
+    else  display.println("S");
+    display.setCursor(80, 46);
+    display.println(F("Max"));
+
+    //display.println(offset);
+    display.display();
+
   }
-  else  display.println("S");
-  display.setCursor(80, 46);
-  display.println(F("Max"));
-
-  //display.println(offset);
-  display.display();
-  delay(500);
 }
-
 
 
 
