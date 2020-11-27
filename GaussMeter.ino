@@ -99,7 +99,7 @@ void loop() {
   if ((500+last_time) <= millis())
   {
     last_time = millis();
-    Serial.println(last_time );
+    // Serial.println(last_time );
     display.clearDisplay();
     display.setTextSize(2);             // Normal 1:1 pixel scale
     display.setTextColor(BLACK, WHITE);        // Draw white text
