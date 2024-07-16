@@ -15,6 +15,16 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
+#define SUPPLYVOLTAGE 4.5  // sensor supply voltage 
+
+// SELKECT HALL EFFECT
+// Comment out all unused parts with //
+
+#define AH49H
+//#define SS495A
+//#define testOutput
+
+
 // Declaration for SSD1306 display connected using software SPI (default case):
 #define OLED_MOSI   9
 #define OLED_CLK   10
@@ -32,11 +42,13 @@ int loopCounter;
 int maxGauss;
 int offset;
 unsigned long last_time;
+
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
-
-  offset = 2500 - (map(analogRead(A1), 0, 1023, 0, 5000)); // set the correction offset value
+  volt = AverageHallSensor() ;// read the input
+  offset = (SUPPLYVOLTAGE * 500) - (map(volt, 0, 1023, 0, (SUPPLYVOLTAGE * 1000))); // set the correction offset value
   delay(500);
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -47,10 +59,7 @@ void setup() {
 
   last_time = millis();
 
-  // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
-  //display.display();
-  //delay(2000); // Pause for 2 seconds
+
 
   // Clear the buffer
   display.clearDisplay();
@@ -63,19 +72,10 @@ void setup() {
   // unless that's what you want...rather, you can batch up a bunch of
   // drawing operations and then update the screen all at once by calling
   // display.display(). These examples demonstrate both approaches...
-
-
-
   //testdrawrect();      // Draw rectangles (outlines)
-
   //testdrawchar();      // Draw characters of the default font
-
   //testscrolltext();    // Draw scrolling text
-
   //testdrawbitmap();    // Draw a small bitmap image
-
-
-
   //testanimate(logo_bmp, LOGO_WIDTH, LOGO_HEIGHT); // Animate bitmaps
 }
 
@@ -83,10 +83,18 @@ void setup() {
 
 
 void loop() {
-  volt = analogRead(A1);// read the input
-  voltage = map(volt, 0, 1023, 0, 5000) + offset; // map 0-1023 to 0-2500 and add correction offset
-  voltage /= 1000; // divide by 100 to get the decimal values
-  Gauss = (voltage - 2.5) * 320;  // 3.125mV/Gauss is 320 Gauss per Volt
+  volt = AverageHallSensor() ;// read the input
+  voltage = map(volt, 0, 1023, 0, (SUPPLYVOLTAGE * 1000)) + offset; // map 0-1023 to 0-SUPPLYVOLTAGE*1000 (5000 or 3300) and add correction offset
+  voltage /= 1000; // divide by 1000 to get the decimal values
+
+#ifdef AH49H
+  Gauss = -(voltage - ((double)SUPPLYVOLTAGE / 2)) * 3030; // 0.33mV/Gauss is 3030.3 Gauss per Volt
+#endif
+
+#ifdef SS495A
+  Gauss = (voltage - ((double)SUPPLYVOLTAGE / 2)) * 320; // 3.125mV/Gauss is 320 Gauss per Volt
+#endif
+
   if (abs(Gauss) > abs(maxGauss))
   {
     maxGauss = Gauss;
@@ -94,12 +102,11 @@ void loop() {
   }
 
 
-
-    
-  if ((500+last_time) <= millis())
+// Lets update Display ever 500ms
+  if ((500 + last_time) <= millis())
   {
     last_time = millis();
-    // Serial.println(last_time );
+
     display.clearDisplay();
     display.setTextSize(2);             // Normal 1:1 pixel scale
     display.setTextColor(BLACK, WHITE);        // Draw white text
@@ -115,7 +122,7 @@ void loop() {
     display.println(maxGauss);
     display.setCursor(80, 32);
     //display.println(F(" G"));
-    if (voltage < 2.5)
+    if (voltage < (double)SUPPLYVOLTAGE / 2)
     {
       display.println("N");
     }
@@ -126,10 +133,30 @@ void loop() {
     //display.println(offset);
     display.display();
 
+
+#ifdef testOutput
+    Serial.println(offset);
+    Serial.println(voltage,4);
+    Serial.println(Gauss);
+#endif
   }
 }
 
 
+int AverageHallSensor(void)
+
+{
+  long  avgVolts=0;
+
+  for ( byte i = 0; i < 32; i++)
+  {
+    avgVolts = analogRead(A1) + avgVolts;
+  }
+
+  avgVolts = avgVolts / 32;
+
+  return avgVolts;
+}
 
 
 
